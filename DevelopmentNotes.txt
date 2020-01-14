@@ -1,0 +1,14 @@
+ToDo list in project
+
+create a wrapper for the Automation Interface in M Code
+
+Auto Interface Wrapper
+
+VS Handler Class
+-can scan for VS versions
+-loads in the dll and .NET assemblies 
+-create VS instance
+
+TwinCAT Handler Class
+-can create TC solution
+-
