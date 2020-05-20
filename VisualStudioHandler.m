@@ -7,18 +7,7 @@ classdef VisualStudioHandler
     end
     
     methods
-        %function obj = untitled(inputArg1,inputArg2)
-            %UNTITLED Construct an instance of this class
-            %   Detailed explanation goes here
-            %obj.Property1 = inputArg1 + inputArg2;
-        %end
-        
-        %function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            %outputArg = obj.Property1 + inputArg;
-        %end
-        
+        %Constructor
          function this = VisualStudioHandler
         % Constructor of class
         %   load all assemblies necessary for the Automation Interface
@@ -79,6 +68,82 @@ classdef VisualStudioHandler
             settings = TCatSysManagerLib.ITcAutomationSettings(this.VsDTE.GetObject('TcAutomationSettings'));
             settings.SilentMode = true;
          end
+         
+         function OpenTwinCatSolution(this, SolutionDirectory, SolutionName, ProjectNumber)
+        % OpenTwinCatSolution  opens existing TwinCAT Solution 
+        % 
+        %   Tc3_AI.OpenTwinCatSolution(SolutionDirectory, SolutionName, ProjectNumber)
+        %   open an existing TwinCAT solution in Visual Studio (VsDTE) 
+        %   in the specified directors (SolutionDirectory) with the given 
+        %   solution name (SolutionName). The properties project and 
+        %   sysManager are set to the specified project (ProjectNumber).
+        %
+        %   set properties: solutionPath, solution, project, sysManager
+        %
+        %   See also
+        %   <a href="https://infosys.beckhoff.com/content/1033/tc3_automationinterface/36028797261893003.html"
+        %   >Beckhoff Infosys</a>    
+        
+            % set default value
+            if nargin < 4 
+                ProjectNumber = 1;
+            end
+            
+            % set solutionPath, open solution
+            this.solutionPath = [SolutionDirectory,'\',SolutionName,'.sln'];
+            this.solution = this.VsDTE.Solution;
+            this.solution.Open(this.solutionPath);
+            
+            % set project
+            if this.solution.Projects.Count > 1
+                disp('Found more than one project in opened solution.')
+            end
+            this.project = this.solution.Projects.Item(ProjectNumber);
+            
+            % create sysManager
+            this.sysManager = TCatSysManagerLib.ITcSysManager7(this.project.Object);
+         end
+        
+         function CreateTwinCatSolution(this, SolutionDirectory, SolutionName)
+        % CreateTwinCatSolution  creates a new TwinCAT Solution
+        %   
+        %   CreateNewTcSolution(SolutionDirectory, SolutionName)
+        %   create a new Standard TwinCAT Solution in VS (VsDTE) in the
+        %   specified directory (SolutionDirectory) with the given 
+        %   solution name (SolutionName).
+        %
+        %   set properties: solutionPath, solution, project, sysManager
+        %   
+        %   see also:
+        %   <a href="https://infosys.beckhoff.com/content/1033/tc3_automationinterface/45035996516426763.html"
+        %   >Beckhoff Infosys</a>
+            
+            % set solutionPath
+            this.solutionPath = [SolutionDirectory,'\',SolutionName,'.sln'];
+            
+            % create directory and solution
+            [solDir, solName, ~] = fileparts(this.solutionPath);
+            if (~exist(solDir, 'dir'))
+                mkdir(solDir);
+            end
+            this.solution = this.VsDTE.Solution;   % handle to solution layer
+            this.solution.Create(solDir,solName);  % create a new empty solution
+            
+            % set project and template path (standard TwinCAT project template)
+            projectPath  = [SolutionDirectory,'\',SolutionName,'\',SolutionName,'.tsproj'];
+            templatePath = [getenv('TwinCAT3Dir') 'Components\Base\PrjTemplate\TwinCAT Project.tsproj'];
+            
+            % creaty project and sysManager
+            [projDir, projName, ~] = fileparts(projectPath);
+            this.project = this.solution.AddFromTemplate(templatePath, projDir, projName, false); % add new project using a template
+            this.sysManager = TCatSysManagerLib.ITcSysManager7(this.project.Object); % from now we are inside a TwinCAT Project, so we use the TC Automation Interface
+         end
+        
+         function SaveSolution(this)
+        % SaveSolution  saves the current TC3 Project and VS Solution
+            this.project.Save();
+            this.solution.SaveAs(this.solutionPath);
+        end
     end
     
     methods (Static)
