@@ -147,7 +147,6 @@ classdef VisualStudioHandler < handle
              a = this.sysManager;
          end
              
-         
          function SaveSolution(this)
         % SaveSolution  saves the current TC3 Project and VS Solution
             this.project.Save();

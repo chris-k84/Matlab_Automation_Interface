@@ -1,11 +1,9 @@
 classdef TwinCATHandler < handle
-    %TWINCATHANDLER Summary of this class goes here
-    %   Detailed explanation goes here
+    %TWINCATHANDLER class used to maipulate TwinCAT project
     
     properties
-%         Property1
-            project              % interface pf the Tc Project
-            sysManager           % interface to the system manager object
+        sysManager           
+        TcCOM  
     end
     
     methods

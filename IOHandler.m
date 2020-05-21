@@ -1,6 +1,5 @@
 classdef IOHandler < handle
-    %IOHANDLER Summary of this class goes here
-    %   Detailed explanation goes here
+    %IOHANDLER class to handle IO elements of TwinCAT
     
     properties
         sysManager
