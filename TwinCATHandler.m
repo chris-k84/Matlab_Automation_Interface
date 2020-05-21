@@ -1,4 +1,4 @@
-classdef TwinCATHandler
+classdef TwinCATHandler < handle
     %TWINCATHANDLER Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -11,7 +11,7 @@ classdef TwinCATHandler
     methods
         
         function this = TwinCATHandler(sysManager)
-            sysManager = sysManager;
+            this.sysManager = sysManager;
         end
         
         function ActivateOnDevice(this, AmsNetId)
@@ -102,6 +102,11 @@ classdef TwinCATHandler
             
             this.sysManager.LinkVariables(TreePathVar1, TreePathVar2);
             
+        end
+        
+        function CreateTask(this)
+            Tasks = this.sysManager.LookupTreeItem('TIRT'); % TIRT: Real-Time Configuration" TAB "Additional Tasks"
+            Task = Tasks.CreateChild('Test',1,[],[]);
         end
         
         function TcComObject = CreateTcCOM(this, Modelname)

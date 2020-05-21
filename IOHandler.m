@@ -1,14 +1,18 @@
-classdef IOHandler
+classdef IOHandler < handle
     %IOHANDLER Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
-        Property1
+        sysManager
     end
     
     methods
         
-         function Boxes = ScanEtherCatMasters(this, AmsNetId)
+        function this = IOHandler(sysManager)
+            this.sysManager = sysManager;
+        end
+        
+        function Boxes = ScanEtherCatMasters(this, AmsNetId)
         % ScanEtherCatMasters scans the target system for EtherCAT masters
         %
         %   Boxes = ScanEtherCatMasters(AmsNetId)

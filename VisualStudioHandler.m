@@ -1,9 +1,13 @@
-classdef VisualStudioHandler
+classdef VisualStudioHandler < handle
     %Visual Studio Handler Class to load in VS instances
     
     properties
         AssembliesLoaded     % BOOL flag indicating successfully loaded assemblies
         VsDTE                % interface of the opended VS instance
+        sysManager
+        solutionPath 
+        solution             % interface of the Solution in VS
+        project              % interface pf the Tc Project
     end
     
     methods
@@ -139,6 +143,11 @@ classdef VisualStudioHandler
             this.sysManager = TCatSysManagerLib.ITcSysManager7(this.project.Object); % from now we are inside a TwinCAT Project, so we use the TC Automation Interface
          end
         
+         function a = get.sysManager(this)
+             a = this.sysManager;
+         end
+             
+         
          function SaveSolution(this)
         % SaveSolution  saves the current TC3 Project and VS Solution
             this.project.Save();
