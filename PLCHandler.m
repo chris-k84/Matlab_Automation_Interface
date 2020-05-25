@@ -1,4 +1,4 @@
-classdef PLCHandler < handle
+    classdef PLCHandler < handle
     %PLCHANDLER Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -15,16 +15,13 @@ classdef PLCHandler < handle
         function CreatePLC(this, projectName)
             try
                 PLC = this.sysManager.LookupTreeItem('TIPC');
-                %templatePath = [getenv('TwinCAT3Dir') 'Components\Plc\PlcTemplate\Plc Templates\Standard PLC Template.plcproj'];
-                %this.plcProject = PLC.CreateChild(projectName, 1, [], templatePath);
-                this.plcProject = PLC.CreateChild(projectName, 0, [], 'Standard PLC Template.plcproj');
+                this.plcProject = PLC.CreateChild(projectName, 0, [], "Standard PLC Template");
             catch e
                 disp(e.message);
                 disp('test');
                 warning('So this happened');
             end
         end
-        
     end
 end
 

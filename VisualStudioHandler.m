@@ -59,7 +59,8 @@ classdef VisualStudioHandler < handle
         %   set property: VsDTE
             
             % get VS Type and create Instance
-            VsProgID = ['VisualStudio.DTE.' num2str(VsVersion) '.0']; % program identifier Visual Studio 2015
+            VsProgID = ['VisualStudio.DTE.' num2str(VsVersion)]; % program identifier Visual Studio 2015
+            %VsProgID = 'TcXaeShell.DTE.15.0';
             t = System.Type.GetTypeFromProgID(VsProgID); % get assicianted type with ProgID
             this.VsDTE = EnvDTE80.DTE2(System.Activator.CreateInstance(t)); % create VS instance
             
@@ -170,15 +171,17 @@ classdef VisualStudioHandler < handle
         
             vsVersions = [];
             
-            for vsVer = [10 11 12 14, 15] 
-                for vsKey={'SOFTWARE\Microsoft\VisualStudio\' 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\'}
-                    try  %#ok<TRYNC>
-                        key = [vsKey{1} num2str(vsVer) '.0'];
-                        winqueryreg('HKEY_LOCAL_MACHINE', key , 'InstallDir');
-                        vsVersions = vertcat(vsVersions,vsVer);  %#ok<AGROW>
-                    end
-                end
-            end
+%             for vsVer = [10, 11, 12, 14, 15] 
+%                 for vsKey={'SOFTWARE\Microsoft\VisualStudio\' 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\'}
+%                     try  %#ok<TRYNC>
+%                         key = [vsKey{1} num2str(vsVer) '.0'];
+%                         winqueryreg('HKEY_LOCAL_MACHINE', key , 'InstallDir');
+%                         vsVersions = vertcat(vsVersions,vsVer);  %#ok<AGROW>
+%                     end
+%                 end
+%             end
+            vsKey = 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VS7';
+            vsVersions = winqueryreg('name', 'HKEY_LOCAL_MACHINE', vsKey);
         end
     end  
 end
