@@ -3,6 +3,10 @@ classdef IOHandler < handle
     
     properties
         sysManager
+        Devices
+        CAN
+        xmlDoc
+        EcMaster
     end
     
     methods
@@ -96,8 +100,40 @@ classdef IOHandler < handle
                     end
                 end
             end
-         end
+        end %needs rewriting into class
+        
+        function EtherCATMaster = CreateEtherCAT(this)
+            this.Devices = this.sysManager.LookupTreeItem("TIID");
+            this.EcMaster = this.Devices.CreateChild("EtherCAT Master", 111, '', {});
+        end %need to retuern EcMaster ref
+        function this = AddEcSlave(this)%rewrite this to add slave 1 at a time
+            ek1100 = this.EcMaster.CreateChild('EK1100', 9099, '', 'EK1100-0000-0001');
+            el1004 = ek1100.CreateChild('EL1004', 9099, '', 'EL1004-0000-0000');
+            xml = el1004.ProduceXml();
+            this.xmlDoc = System.Xml.XmlDocument;
+            this.xmlDoc.LoadXml(xml);
+            % get element in xml by tag name
+            %itemName = this.xmlDoc.GetElementsByTagName("ItemName");
+            % change inner text of tag
+            %%if itemName ~= 0
+            %    itemName.setAttribute('ChangedByAi');
+            %end
+            item = this.xmlDoc.GetElementsByTagName('Name')
+            thislist = item.item(0);
+            thislist.SetAttribute('Name','Test');
+            
+            el1004.ConsumeXml(this.xmlDoc.InnerXml);
+        end
          
+        function CanDevice = AddCanInterface(this)
+            this.Devices = this.sysManager.LookupTreeItem('TIID');
+            this.CAN = this.Devices.CreateChild("CANDevice", 87, '', {});
+            %CanDevice = this.CAN.CreateChild("CAN", 5051, '', '');
+            CanDevice = this.CAN.ImportChild(['C:\Users\chrisk\Desktop\', 'Box 27 (CAN Interface).xti'],'',true,'CanDevice-1');
+            CanDeviceXml = CanDevice.ProduceXml(false);
+            this.xmlDoc = System.Xml.XmlDocument;
+            this.xmlDoc.LoadXml(CanDeviceXml);
+        end
     end
 end
 
