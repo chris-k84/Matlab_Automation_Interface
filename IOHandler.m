@@ -92,9 +92,10 @@ classdef IOHandler < handle
             end
         end
         
-        function EtherCATMaster = CreateEtherCAT(this)
+        function EtherCATMaster = AddEtherCATNetwork(this, networkFile)
             this.Devices = this.sysManager.LookupTreeItem("TIID");
-            this.EcMaster = this.Devices.CreateChild("EtherCAT Master", 111, '', {});
+            %this.EcMaster = this.Devices.CreateChild("EtherCAT Master", 111, '', {});
+            this.EcMaster = this.Devices.ImportChild(networkFile,"", true, "Device 5 (EtherCAT)"); 
             EtherCATMaster = this.EcMaster;
         end 
         

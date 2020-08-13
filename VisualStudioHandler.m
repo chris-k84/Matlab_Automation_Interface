@@ -128,9 +128,15 @@ classdef VisualStudioHandler < handle
             
             % create directory and solution
             [solDir, solName, ~] = fileparts(this.solutionPath);
-            if (~exist(solDir, 'dir'))
-                mkdir(solDir);
+%             if (~exist(solDir, 'dir'))
+%                 mkdir(solDir);
+%             else
+%                 rmdir(solDir);
+%             end
+            if (exist(solDir, 'dir'))
+                rmdir(SolutionDirectory,'s');
             end
+            mkdir(solDir);
             this.solution = this.VsDTE.Solution;   % handle to solution layer
             this.solution.Create(solDir,solName);  % create a new empty solution
             

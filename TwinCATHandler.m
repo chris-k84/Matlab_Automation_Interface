@@ -145,21 +145,25 @@ classdef TwinCATHandler < handle
             
             % doc -> https://infosys.beckhoff.com/content/1033/tc3_automationinterface/27021598006995083.html?id=5908679173508422650
             parentTreeItem = this.sysManager.LookupTreeItem('TIRC^TcCOM Objects'); % get a pointer to a tree item; shortcut TIRC = real-time configuration, see also link above
+            %parentTreeItem.DeleteChild(Modelname);
             TcComObject = parentTreeItem.CreateChild(Modelname,0,'',classId); % create TcCOM using model name and the class ID
             
             % (3) create cylic task(s)
             Tasks = this.sysManager.LookupTreeItem('TIRT'); % TIRT: Real-Time Configuration" TAB "Additional Tasks"
             xDocTask = System.Xml.XmlDocument;
             TaskOID = cell(1,numel(cycleTime));
+            %CpuAffinity = '#x0000000000000008';
             for i = 1:numel(cycleTime)
                 Task = Tasks.CreateChild(['TaskFor' Modelname '_' num2str(i)],1,[],[]);
                 Task.ConsumeXml(['<TreeItem><TaskDef><Priority>' priority{i} '</Priority></TaskDef></TreeItem>']);
                 Task.ConsumeXml(['<TreeItem><TaskDef><CycleTime>' cycleTime{i}(1:length(cycleTime{i})-2) '</CycleTime></TaskDef></TreeItem>']); 
                 % Has to be scaled to base tick so delete last two zeroes: cycleTime(1:length(cycleTime)-2)
-                
+                %Task.ConsumeXml(['<TreeItem><TaskDef><CpuAffinity>' CpuAffinity '</CpuAffinity></TaskDef></TreeItem>']);
+                %setTaskProperties(Task, priority{i}, cycleTime{i}, CpuAffinity);
                 xDocTask.LoadXml(Task.ProduceXml());
                 TaskOID{i} = char(xDocTask.SelectSingleNode('TreeItem/ObjectId').InnerXml);
             end
+
             
             % (4) Append Task(s) to TcCom Object
             for i = 1:numel(TaskOID)
@@ -173,9 +177,22 @@ classdef TwinCATHandler < handle
                 xContext.AppendChild(XManualConfig);
                 TcComObject.ConsumeXml(xDocTComObj.InnerXml);
             end
+            
+            %Add IO Network
+            IO = IOHandler(this.sysManager);
+            IO.AddEtherCATNetwork("C:\Users\ChrisK\Desktop\Matlab AI Demo\Device 5 (EtherCAT).xti");
+            
+            this.sysManager.LinkVariables("TIID^Device 5 (EtherCAT)^Term 1 (EK1100)^Term 7 (EL3255)^AI Standard Channel 1^Value", "TIRC^TcCOM Objects^TctSmplTempCtrl_Obj1 (TctSmplTempCtrl)^Input^UserOffset");
                         
             this.TcCOM = [this.TcCOM {TcComObject}];            
         end
+        
+        function setTaskProperties(~,currTask,Priority, Cycle,CpuAffinity)
+            currTask.ConsumeXml(['<TreeItem><TaskDef><Priority>' Priority '</Priority></TaskDef></TreeItem>']);
+            currTask.ConsumeXml(['<TreeItem><TaskDef><CycleTime>' Cycle(1:length(Cycle)-2) '</CycleTime></TaskDef></TreeItem>']); 
+            % Has to be scaled to base tick so delete last two zeroes: cycleTime(1:length(cycleTime)-2)
+            currTask.ConsumeXml(['<TreeItem><TaskDef><CpuAffinity>' CpuAffinity '</CpuAffinity></TaskDef></TreeItem>']);
+        end    
     end
 end
 
