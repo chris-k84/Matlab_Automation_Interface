@@ -28,7 +28,7 @@ classdef IOHandler < handle
 
                 this.Devices = GetDeviceMasters(sysManager);
                 
-                EcMasters = ScanForEcMasters(this.Devices);
+                EcMasters = CheckForEcMasters(this.Devices);
                 
                 % scan for boxes
                 for ii = 1:1:(numel(this.devices)) 
@@ -36,73 +36,56 @@ classdef IOHandler < handle
                 end
                 
             end
-        end 
+        end %%remove this
         
-        function devices = GetDeviceMasters(this, sysMan)
-            % get handle to devices item 
-            ioDevicesItem = this.sysManager.LookupTreeItem('TIID');
-
-            % xml work
-            scannedXml = ioDevicesItem.ProduceXml(false);
+        function devices = GetIoDeviceMasters(this, sysMan)
+            %look up the IO node, return the devices listed
+            ioDevices = this.sysManager.LookupTreeItem('TIID');
+            scannedXml = ioDevices.ProduceXml(false);
             xmlDoc = System.Xml.XmlDocument;
             xmlDoc.LoadXml(scannedXml);
             xmlDeviceList = xmlDoc.SelectNodes('TreeItem/DeviceGrpDef/FoundDevices/Device');
-
             devices = xmlDeviceList;
         end
         
-        function EcMasters = ScanForEcMasters(this, deviceList)
+        function EcMasters = CheckDevicesForEcMasters(this, deviceList)
+            %Take device list, search by type for EtherCAT masters (111)
             ECDevicesFound = 0;
-            % get devices
-            for ii = 0:1:(deviceList.Count-1) % devices start with 0
-
-                % get next device item
+            for ii = 0:1:(deviceList.Count-1)
                 node = deviceList.Item(ii);
-
-                % get node specification
                 typeName    = node.SelectSingleNode('ItemSubTypeName').InnerText;
                 xmlAddress  = node.SelectSingleNode('AddressInfo');                                
                 itemSubType = int32(str2num(char(node.SelectSingleNode('ItemSubType').InnerText)));
-
                 % ignore devices that are not EtherCAT masters
                 if(itemSubType == 111)
                     % add found node to device tree
                     ECDevicesFound = ECDevicesFound + 1;
                     device      = ioDevicesItem.CreateChild(System.String.Format('Device_{0}_{1}',ii,typeName),itemSubType,'',{});                
                     xml         = System.String.Format('<TreeItem><DeviceDef>{0}</DeviceDef></TreeItem>',xmlAddress.OuterXml);
-
                     device.ConsumeXml(xml);
-
                     EcMasters = [EcMasters {device}];
-
                 end
             end
         end
         
-        function EtherCATBoxes = GetEcNetworkBoxes(this, device)
+        function EtherCATBoxes = GetEcNetworkBoxes(this, EcMaster)
+            %Consume EtherCAT master, pull out network slaves
             xml = '<TreeItem><DeviceDef><ScanBoxes>1</ScanBoxes></DeviceDef></TreeItem>';
             try
-                this.devices.ConsumeXml(xml);                   
+                this.EcMaster.ConsumeXml(xml);                   
             catch e
                 disp(e.message);
             end
-            for jj = 1:1:(this.devices.ChildCount) % childs of devices start with 1
-                EtherCATBoxes = [Boxes, char(this.devices{ii}.Child(jj).PathName)];
-                %disp(['Found Box: ', char(this.devices{ii}.Child(jj).PathName)]) % use this for linking
+            for jj = 1:1:(this.EcMaster.ChildCount)
+                EtherCATBoxes = [Boxes, char(this.EcMaster{ii}.Child(jj).PathName)];
             end
         end
         
-        function EtherCATMaster = AddEtherCATNetwork(this, networkFile)
+        function EtherCATMaster = AddEtherCATNetwork(this, networkFile, networkName)
             this.Devices = this.sysManager.LookupTreeItem("TIID");
-            %this.EcMaster = this.Devices.CreateChild("EtherCAT Master", 111, '', {});
-            this.EcMaster = this.Devices.ImportChild(networkFile,"", true, "Device 5 (EtherCAT)"); 
+            this.EcMaster = this.Devices.ImportChild(networkFile,"", true, networkName); 
             EtherCATMaster = this.EcMaster;
         end 
-        
-        function Child = AddEcSlave(this, ParentNode)%rewrite this to add slave 1 at a time
-            ek1100 = ParentNode.CreateChild('EK1100', 9099, '', 'EK1100-0000-0001');
-            el1004 = ek1100.CreateChild('EL1004', 9099, '', 'EL1004-0000-0000');
-        end
          
         function CanDevice = AddCanInterface(this)
             this.Devices = this.sysManager.LookupTreeItem('TIID');
