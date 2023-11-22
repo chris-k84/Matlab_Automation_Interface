@@ -38,7 +38,7 @@ classdef VisualStudioHandler < handle
 					NET.addAssembly('EnvDTE80'); % doc -> https://docs.microsoft.com/en-us/dotnet/api/envdte80
 				catch
 					% Load assemblies from VS install directory if not available in GAC
-					[~,installDirs] = Tc3AutomationInterface.GetInstalledVisualStudios(true);
+					[~,installDirs] = this.GetInstalledVisualStudios(true);
 					if ~isempty(installDirs)
 						dteDllDir = fullfile(installDirs(1), 'Common7\IDE\PublicAssemblies');
 						NET.addAssembly(fullfile(dteDllDir, 'envdte.dll'));
@@ -71,7 +71,7 @@ classdef VisualStudioHandler < handle
         %   set property: VsDTE
             
             % get VS Type and create Instance
-            VsProgID = ['VisualStudio.DTE.' num2str(VsVersion) '.0']
+            VsProgID = ['VisualStudio.DTE.' num2str(VsVersion) '.0'];
             %VsProgID = ['VisualStudio.DTE.' num2str(VsVersion)]; % program identifier Visual Studio 2015
             %VsProgID = 'TcXaeShell.DTE.15.0';
             t = System.Type.GetTypeFromProgID(VsProgID); % get assicianted type with ProgID
