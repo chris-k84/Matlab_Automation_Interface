@@ -31,8 +31,20 @@ classdef VisualStudioHandler < handle
                 % load assemblies
                 
                 % COM lib for Visual Studio Core Automation - for VS specific commands
-                NET.addAssembly('EnvDTE');   % doc -> https://docs.microsoft.com/en-us/dotnet/api/envdte
-                NET.addAssembly('EnvDTE80'); % doc -> https://docs.microsoft.com/en-us/dotnet/api/envdte80
+                %NET.addAssembly('EnvDTE');   % doc -> https://docs.microsoft.com/en-us/dotnet/api/envdte
+                %NET.addAssembly('EnvDTE80'); % doc -> https://docs.microsoft.com/en-us/dotnet/api/envdte80
+                try
+					NET.addAssembly('EnvDTE');   % doc -> https://docs.microsoft.com/en-us/dotnet/api/envdte
+					NET.addAssembly('EnvDTE80'); % doc -> https://docs.microsoft.com/en-us/dotnet/api/envdte80
+				catch
+					% Load assemblies from VS install directory if not available in GAC
+					[~,installDirs] = Tc3AutomationInterface.GetInstalledVisualStudios(true);
+					if ~isempty(installDirs)
+						dteDllDir = fullfile(installDirs(1), 'Common7\IDE\PublicAssemblies');
+						NET.addAssembly(fullfile(dteDllDir, 'envdte.dll'));
+						NET.addAssembly(fullfile(dteDllDir, 'envdte80.dll'));
+					end
+				end
                 
                 % Lib for parsing XML docs like tmc files
                 NET.addAssembly('System.Xml'); % doc -> https://msdn.microsoft.com/library/system.xml.aspx
@@ -59,7 +71,8 @@ classdef VisualStudioHandler < handle
         %   set property: VsDTE
             
             % get VS Type and create Instance
-            VsProgID = ['VisualStudio.DTE.' num2str(VsVersion)]; % program identifier Visual Studio 2015
+            VsProgID = ['VisualStudio.DTE.' num2str(VsVersion) '.0']
+            %VsProgID = ['VisualStudio.DTE.' num2str(VsVersion)]; % program identifier Visual Studio 2015
             %VsProgID = 'TcXaeShell.DTE.15.0';
             t = System.Type.GetTypeFromProgID(VsProgID); % get assicianted type with ProgID
             this.VsDTE = EnvDTE80.DTE2(System.Activator.CreateInstance(t)); % create VS instance
@@ -162,32 +175,107 @@ classdef VisualStudioHandler < handle
     end
     
     methods (Static)
-        function vsVersions = GetInstalledVisualStudios
-        % GetInstalledVisualStudios  gets all installes VS versions
-        %
-        %   vsVersions = GetInstalledVisualStudios
-        %   Static Method. Looks up all installed Visual Studio versions.
-        %   Returns an array of numbers (vsVersions)
-        %   
-        %   10 -> VS 2010
-        %   11 -> VS 2012
-        %   12 -> VS 2013
-        %   14 -> VS 2015
-        %   15 -> VS 2017
-        
-            vsVersions = [];
-            
-%             for vsVer = [10, 11, 12, 14, 15] 
-%                 for vsKey={'SOFTWARE\Microsoft\VisualStudio\' 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\'}
-%                     try  %#ok<TRYNC>
-%                         key = [vsKey{1} num2str(vsVer) '.0'];
-%                         winqueryreg('HKEY_LOCAL_MACHINE', key , 'InstallDir');
-%                         vsVersions = vertcat(vsVersions,vsVer);  %#ok<AGROW>
-%                     end
-%                 end
-%             end
-            vsKey = 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VS7';
-            vsVersions = winqueryreg('name', 'HKEY_LOCAL_MACHINE', vsKey);
-        end
+        function [vsVersions,installDirs] = GetInstalledVisualStudios(requireTcIntegration)
+			% GetInstalledVisualStudios  gets all installes VS versions
+			%
+			%   vsVersions = GetInstalledVisualStudios
+			%   Static Method. Looks up all installed Visual Studio versions.
+			%   Returns an array of numbers (vsVersions)
+			%
+			%   10 -> VS 2010
+			%   11 -> VS 2012
+			%   12 -> VS 2013
+			%   14 -> VS 2015
+			%   15 -> VS 2017
+			%   16 -> VS 2019
+			%   17 -> VS 2022
+			%
+			%   see also:
+			%   <a href="https://infosys.beckhoff.com/content/1033/tc3_automationinterface/27021598006969227.html?id=5787876362957722402"
+			%   >Beckhoff Infosys</a>
+			if nargin < 1
+				requireTcIntegration = false;
+			end
+			
+			vsVersions = uint32.empty();
+			installDirs = string.empty();
+			minVsVersion = uint32(10);
+			maxVsVersion = uint32(17);
+			
+			for vsVer = minVsVersion:uint32(14)
+				for vsKey={'SOFTWARE\Microsoft\VisualStudio\' 'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\'}
+					try  %#ok<TRYNC>
+						key = [vsKey{1} num2str(vsVer) '.0'];
+						installDir = winqueryreg('HKEY_LOCAL_MACHINE', key , 'InstallDir');
+						if requireTcIntegration
+							integrated = ~isempty(dir(fullfile(installDir, 'Common7\IDE\Extensions\Beckhoff Automation GmbH\*TwinCAT*\extension.vsixmanifest')));
+							if ~integrated
+								continue;
+							end
+						end
+						vsVersions = vertcat(vsVersions,vsVer);  %#ok<AGROW>
+						installDirs = [installDirs, string(installDir)];  %#ok<AGROW>
+					end
+				end
+			end
+			
+			% above means are deprecated for vsVer > 14.
+			% use vswhere
+			[err,cout] = system('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -format json -legacy');
+			if err ~= 0
+				return
+			end
+			try
+				value = jsondecode(cout);
+			catch
+				return
+			end
+			for i = 1:length(value)
+				if iscell(value)
+					v = value{i};
+				else
+					v = value(i);
+				end
+				if ~isfield(v,'installationVersion')
+					continue; % unknown version
+				end
+				detectedVersion = v.installationVersion;
+				detectedVersion = strsplit(detectedVersion,'.');
+				installDir = v.installationPath;
+				if isempty(detectedVersion) || isempty(detectedVersion{1})
+					continue; % unknown version
+				end
+				detectedVersion = str2double(detectedVersion{1});
+				if detectedVersion > maxVsVersion || detectedVersion < minVsVersion
+					continue; % unsupported version
+				end
+				if any(vsVersions == detectedVersion)
+					continue; % already on the list
+				end
+				if requireTcIntegration
+					integrated = ~isempty(dir(fullfile(installDir, 'Common7\IDE\Extensions\Beckhoff Automation GmbH\*TwinCAT*\extension.vsixmanifest')));
+					if ~integrated
+						continue;
+					end
+				end
+				vsVersions  = [vsVersions,detectedVersion]; %#ok<AGROW>
+				installDirs = [installDirs, string(installDir)];  %#ok<AGROW>
+			end
+		end
+        function tcXaeShVersions = GetInstalledTcXaeShells()
+			tcXaeShVersions = uint32.empty();
+			minVersion = uint32(10);
+			maxVersion = uint32(17);
+
+			for vsVer = minVersion:maxVersion
+				for vsKey={'SOFTWARE\Beckhoff\TcXaeShell\' 'SOFTWARE\Wow6432Node\Beckhoff\TcXaeShell\'}
+					try  %#ok<TRYNC>
+						key = [vsKey{1} num2str(vsVer) '.0'];
+						winqueryreg('HKEY_LOCAL_MACHINE', key , 'InstallDir');
+						tcXaeShVersions = vertcat(tcXaeShVersions,vsVer);  %#ok<AGROW>
+					end
+				end
+			end
+		end
     end  
 end
