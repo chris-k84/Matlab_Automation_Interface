@@ -79,7 +79,7 @@ classdef VisualStudioHandler < handle
             
             % set Visibility
             this.VsDTE.MainWindow.Visible = visible; % set visibility of main developement window of VS (true/false)
-            this.VsDTE.SuppressUI = ~visible;   % set weather UI should be displayed
+            this.VsDTE.SuppressUI = visible;   % set weather UI should be displayed
             
             % activate siltent mode
             % doc -> https://infosys.beckhoff.com/content/1033/tc3_automationinterface/2489025803.html
